@@ -4,7 +4,7 @@ using Natural Language Processing.
 
 Contents of this repository include:
 
-- **Fake Image Classification** using machine learning, consisting of:
+- **Fake Image Classification** using computer vision && machine learning:
   - Dataset statistics analysis
   - Data pre-processing
   - Model selection & configuration
@@ -14,7 +14,7 @@ Contents of this repository include:
   - Model Evaluation
 
 
-- **Fake new predictions** using machine learning, consisting of:
+- **Fake new predictions** using natural language processing && machine learning:
   - Selecting Pretrained Model (from huggingface.co community)
   - Loading Dataset and Splitting train-test ratio
   - Loading Tokenizer
