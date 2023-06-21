@@ -8,6 +8,12 @@ If operating on pyCharm, we need to first install
 - torch package
 - numPy package
 
+NOTE: TO RUN Torch Locally with CUDA Enabled install using the command:
+from [here](https://pytorch.org/) (Pytorch website). Otherwise, CUDA will NOT BE enabled.
+```commandLine
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+```
+
 If GPU is unavailable through PyCharm due to the virtual environment, 
 you can opt to run the py file through the command line.
 

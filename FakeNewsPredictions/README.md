@@ -12,10 +12,10 @@ pip install lime
 ```
 Note:
 - pandas (pycaret) is not enabled for python 3.11 (as of now), hence we can run following to install for py 3.9.
-- Following that, we will need to run on python 3.9. Hence, set the system interpreter accordingly.
+- Following that, we will need to run on python 3.10. Hence, set the system interpreter accordingly.
 
 ```commandline
-py -3.9 -m pip install pycaret
+py -3.10 -m pip install pycaret
 ```
 
 
