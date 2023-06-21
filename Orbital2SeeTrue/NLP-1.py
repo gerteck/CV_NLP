@@ -70,7 +70,7 @@ unmasker = pipeline('fill-mask', model='albert-base-v2')
 
 data = pd.read_csv('train.csv')
 data_filled = data.fillna(value=" ")
-data['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
+data['nlp_title_comments'] = data_filled['nlp_title'].astype(str) + ", " + data_filled['nlp_comments'].astype(str)
 print(data.nlp_title_comments[20])
 
 # Target column is made of string values True/Fake, let's change it to numbers 0/1 (Fake=1)
@@ -100,7 +100,7 @@ plt.show();
 
 
 # Majority of titles above have word length under 15. So, we set max title length as 15
-MAX_LENGTH = 55
+MAX_LENGTH = 30
 # Tokenize and encode sequences in the train set
 tokens_train = tokenizer.batch_encode_plus(
     train_text.tolist(),
@@ -183,7 +183,7 @@ optimizer = AdamW(model.parameters(),
 # Define the loss function
 cross_entropy  = nn.NLLLoss()
 # Number of training epochs
-epochs = 20
+epochs = 55
 
 
 # Defining training and evaluation functions
@@ -277,7 +277,7 @@ import pandas as pd
 #unseen_news_text = ["Integrated resorts in Japan, Thailand set to compete with Singapore's own"]
 test_data = pd.read_csv("test.csv")
 data_filled = test_data.fillna(value=" ")
-data_filled['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
+data_filled['nlp_title_comments'] = data_filled['nlp_title'].astype(str) + ", " + data_filled['nlp_comments'].astype(str)
 print(data_filled.nlp_title_comments[20])
 unseen_news_text = data_filled['nlp_title_comments']
 
@@ -287,7 +287,7 @@ unseen_news_text = data_filled['nlp_title_comments']
 #unseen_news_text = ["top snake handler leaves sinking huckabee campaign"]
 
 # tokenize and encode sequences in the test set
-MAX_LENGTH = 55
+MAX_LENGTH = 30
 tokens_unseen = tokenizer.batch_encode_plus(
     unseen_news_text,
     max_length = MAX_LENGTH,
@@ -316,4 +316,4 @@ converted_predictions = [label(x) for x in preds]
 
 test_df = pd.read_csv("test.csv")
 test_df["nlp_class"] = converted_predictions
-test_df.to_csv("nlp_predictions0.csv", index=False)
+test_df.to_csv("nlp_predictionsFinalpls.csv", index=False)
