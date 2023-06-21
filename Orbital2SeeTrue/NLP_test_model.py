@@ -69,6 +69,7 @@ unmasker = pipeline('fill-mask', model='albert-base-v2')
 
 # Named entity recognition
 ner = pipeline(model="dslim/bert-base-NER-uncased")
+
 data = pd.read_csv('train.csv')
 data_filled = data.fillna(value=" ")
 data['nlp_title_text'] = "title: " + data_filled['nlp_title'].astype(str) + ", text: " + data_filled['nlp_text'].astype(str)
@@ -94,12 +95,11 @@ val_text, test_text, val_labels, test_labels = train_test_split(temp_text, temp_
 # Plot histogram of the number of words in train data 'title'
 seq_len = [len(title.split()) for title in train_text]
 
-pd.Series(seq_len).hist(bins = 100,color='firebrick')
-plt.xlabel('Number of Words')
-plt.ylabel('Number of texts')
-plt.show();
+# pd.Series(seq_len).hist(bins = 100,color='firebrick')
+# plt.xlabel('Number of Words')
+# plt.ylabel('Number of texts')
+# plt.show();
 
-print("breakpoint");
 
 # Majority of titles above have word length under 15. So, we set max title length as 15
 MAX_LENGTH = 200
@@ -189,68 +189,126 @@ epochs = 20
 
 
 # Defining training and evaluation functions
-def train():
-  model.train()
-  total_loss, total_accuracy = 0, 0
+# def train():
+#   model.train()
+#   total_loss, total_accuracy = 0, 0
+#
+#   for step,batch in enumerate(train_dataloader):                # iterate over batches
+#     if step % 50 == 0 and not step == 0:                        # progress update after every 50 batches.
+#       print('  Batch {:>5,}  of  {:>5,}.'.format(step, len(train_dataloader)))
+#     batch = [r.to(device) for r in batch]                                  # push the batch to gpu
+#     sent_id, mask, labels = batch
+#     model.zero_grad()                                           # clear previously calculated gradients
+#     preds = model(sent_id, mask)                                # get model predictions for current batch
+#     loss = cross_entropy(preds, labels)                         # compute loss between actual & predicted values
+#     total_loss = total_loss + loss.item()                       # add on to the total loss
+#     loss.backward()                                             # backward pass to calculate the gradients
+#     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)     # clip gradients to 1.0. It helps in preventing exploding gradient problem
+#     optimizer.step()                                            # update parameters
+#     preds=preds.detach().cpu().numpy()                          # model predictions are stored on GPU. So, push it to CPU
+#
+#   avg_loss = total_loss / len(train_dataloader)                 # compute training loss of the epoch
+#                                                                 # reshape predictions in form of (# samples, # classes)
+#   return avg_loss                                 # returns the loss and predictions
+#
+# def evaluate():
+#   print("\nEvaluating...")
+#   model.eval()                                    # Deactivate dropout layers
+#   total_loss, total_accuracy = 0, 0
+#   for step,batch in enumerate(val_dataloader):    # Iterate over batches
+#     if step % 50 == 0 and not step == 0:          # Progress update every 50 batches.
+#                                                   # Calculate elapsed time in minutes.
+#                                                   # Elapsed = format_time(time.time() - t0)
+#       print('  Batch {:>5,}  of  {:>5,}.'.format(step, len(val_dataloader)))
+#                                                   # Report progress
+#     batch = [t.to(device) for t in batch]                    # Push the batch to GPU
+#     sent_id, mask, labels = batch
+#     with torch.no_grad():                         # Deactivate autograd
+#       preds = model(sent_id, mask)                # Model predictions
+#       loss = cross_entropy(preds,labels)          # Compute the validation loss between actual and predicted values
+#       total_loss = total_loss + loss.item()
+#       preds = preds.detach().cpu().numpy()
+#   avg_loss = total_loss / len(val_dataloader)         # compute the validation loss of the epoch
+#   return avg_loss
+#
+#
+# # Train and predict (OPTIONAL)
+# best_valid_loss = float('inf')
+# train_losses=[]                   # empty lists to store training and validation loss of each epoch
+# valid_losses=[]
+#
+# for epoch in range(epochs):
+#     print('\n Epoch {:} / {:}'.format(epoch + 1, epochs))
+#     train_loss = train()                       # train model
+#     valid_loss = evaluate()                    # evaluate model
+#     if valid_loss < best_valid_loss:              # save the best model
+#         best_valid_loss = valid_loss
+#         torch.save(model.state_dict(), 'new_model_weights.pt')
+#     train_losses.append(train_loss)               # append training and validation loss
+#     valid_losses.append(valid_loss)
+#
+#     print(f'\nTraining Loss: {train_loss:.3f}')
+#     print(f'Validation Loss: {valid_loss:.3f}')
+#
+#
+# # save weights of trained model (OPTIONAL)
+# path = 'fakenews_weights.pt'
+# torch.save(model.state_dict(), path)
 
-  for step,batch in enumerate(train_dataloader):                # iterate over batches
-    if step % 50 == 0 and not step == 0:                        # progress update after every 50 batches.
-      print('  Batch {:>5,}  of  {:>5,}.'.format(step, len(train_dataloader)))
-    batch = [r.to(device) for r in batch]                                  # push the batch to gpu
-    sent_id, mask, labels = batch
-    model.zero_grad()                                           # clear previously calculated gradients
-    preds = model(sent_id, mask)                                # get model predictions for current batch
-    loss = cross_entropy(preds, labels)                         # compute loss between actual & predicted values
-    total_loss = total_loss + loss.item()                       # add on to the total loss
-    loss.backward()                                             # backward pass to calculate the gradients
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)     # clip gradients to 1.0. It helps in preventing exploding gradient problem
-    optimizer.step()                                            # update parameters
-    preds=preds.detach().cpu().numpy()                          # model predictions are stored on GPU. So, push it to CPU
-
-  avg_loss = total_loss / len(train_dataloader)                 # compute training loss of the epoch
-                                                                # reshape predictions in form of (# samples, # classes)
-  return avg_loss                                 # returns the loss and predictions
-
-def evaluate():
-  print("\nEvaluating...")
-  model.eval()                                    # Deactivate dropout layers
-  total_loss, total_accuracy = 0, 0
-  for step,batch in enumerate(val_dataloader):    # Iterate over batches
-    if step % 50 == 0 and not step == 0:          # Progress update every 50 batches.
-                                                  # Calculate elapsed time in minutes.
-                                                  # Elapsed = format_time(time.time() - t0)
-      print('  Batch {:>5,}  of  {:>5,}.'.format(step, len(val_dataloader)))
-                                                  # Report progress
-    batch = [t.to(device) for t in batch]                    # Push the batch to GPU
-    sent_id, mask, labels = batch
-    with torch.no_grad():                         # Deactivate autograd
-      preds = model(sent_id, mask)                # Model predictions
-      loss = cross_entropy(preds,labels)          # Compute the validation loss between actual and predicted values
-      total_loss = total_loss + loss.item()
-      preds = preds.detach().cpu().numpy()
-  avg_loss = total_loss / len(val_dataloader)         # compute the validation loss of the epoch
-  return avg_loss
 
 
-# Train and predict (OPTIONAL)
-best_valid_loss = float('inf')
-train_losses=[]                   # empty lists to store training and validation loss of each epoch
-valid_losses=[]
+## APPLYING ON TEST DATA:
 
-for epoch in range(epochs):
-    print('\n Epoch {:} / {:}'.format(epoch + 1, epochs))
-    train_loss = train()                       # train model
-    valid_loss = evaluate()                    # evaluate model
-    if valid_loss < best_valid_loss:              # save the best model
-        best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'new_model_weights.pt')
-    train_losses.append(train_loss)               # append training and validation loss
-    valid_losses.append(valid_loss)
+# load weights of best model
+# path = 'fakenews_weights2.pt'
+path = 'new_model_weights2.pt'
+model.load_state_dict(torch.load(path))
 
-    print(f'\nTraining Loss: {train_loss:.3f}')
-    print(f'Validation Loss: {valid_loss:.3f}')
+with torch.no_grad():
+  preds = model(test_seq, test_mask)
+  preds = preds.detach().cpu().numpy()
+
+preds = np.argmax(preds, axis = 1)
+print(classification_report(test_y.cpu(), preds))
 
 
-# save weights of trained model (OPTIONAL)
-path = 'fakenews_weights.pt'
-torch.save(model.state_dict(), path)
+# testing on unseen data (0 is True; 1 is Fake)
+import pandas as pd
+test_data = pd.read_csv("test.csv")
+data_filled = test_data.fillna(value=" ")
+data_filled['nlp_title_text'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
+unseen_news_text = data_filled['nlp_title_text']
+
+
+# tokenize and encode sequences in the test set
+MAX_LENGTH = 400
+tokens_unseen = tokenizer.batch_encode_plus(
+    unseen_news_text,
+    max_length = MAX_LENGTH,
+    pad_to_max_length=True,
+    truncation=True
+)
+
+unseen_seq = torch.tensor(tokens_unseen['input_ids']).to(device)
+unseen_mask = torch.tensor(tokens_unseen['attention_mask']).to(device)
+
+with torch.no_grad():
+  preds = model(unseen_seq, unseen_mask)
+  preds = preds.detach().cpu().numpy()
+
+preds = np.argmax(preds, axis = 1)
+
+print(preds)
+
+def label(x):
+  class_number = round(x)
+  if (class_number == 0):
+    return 'real'
+  else:
+    return 'fake'
+
+converted_predictions = [label(x) for x in preds]
+
+test_df = pd.read_csv("test.csv")
+test_df["nlp_class"] = converted_predictions
+test_df.to_csv("nlp_predictions1.csv", index=False)

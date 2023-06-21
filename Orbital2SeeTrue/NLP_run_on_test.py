@@ -39,7 +39,7 @@ def set_seed_all(seed):
     torch.use_deterministic_algorithms(True, warn_only=True)
 
 
-set_seed_all(1)
+set_seed_all(69)
 
 import pandas as pd
 
@@ -67,11 +67,12 @@ unmasker = pipeline('fill-mask', model='albert-base-v2')
 # But it can be biased e.g. Occupation for Male vs Female
 # print(unmasker("Chloe wishes to be a [MASK]."))
 
-
+# Named entity recognition
+ner = pipeline(model="dslim/bert-base-NER-uncased")
 data = pd.read_csv('train.csv')
 data_filled = data.fillna(value=" ")
-data['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
-print(data.nlp_title_comments[20])
+data['nlp_title_text'] = "title: " + data_filled['nlp_title'].astype(str) + ", text: " + data_filled['nlp_text'].astype(str)
+print(data.nlp_title_text[20])
 
 # Target column is made of string values True/Fake, let's change it to numbers 0/1 (Fake=1)
 data['label'] = pd.get_dummies(data.nlp_class)['fake']
@@ -79,7 +80,7 @@ data['label'] = pd.get_dummies(data.nlp_class)['fake']
 
 # Train-Validation-Test set split into 70:15:15 ratio
 # Train-Temp split
-train_text, temp_text, train_labels, temp_labels = train_test_split(data['nlp_title_comments'], data['label'],
+train_text, temp_text, train_labels, temp_labels = train_test_split(data['nlp_title_text'], data['label'],
                                                                     random_state=2018,
                                                                     test_size=0.3,
                                                                     stratify=data['nlp_class'])
@@ -100,7 +101,7 @@ plt.show();
 
 
 # Majority of titles above have word length under 15. So, we set max title length as 15
-MAX_LENGTH = 55
+MAX_LENGTH = 200
 # Tokenize and encode sequences in the train set
 tokens_train = tokenizer.batch_encode_plus(
     train_text.tolist(),
@@ -277,9 +278,10 @@ import pandas as pd
 #unseen_news_text = ["Integrated resorts in Japan, Thailand set to compete with Singapore's own"]
 test_data = pd.read_csv("test.csv")
 data_filled = test_data.fillna(value=" ")
-data_filled['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
-print(data_filled.nlp_title_comments[20])
-unseen_news_text = data_filled['nlp_title_comments']
+data_filled['nlp_title_text'] = "title: " + data_filled['nlp_title'].astype(str) + ", text: " + data_filled['nlp_text'].astype(str)
+
+
+unseen_news_text = data_filled['nlp_title_text']
 
 # Samples from Fake Websites
 # unseen_news_text = ["Depressed citizen dresses up as adult who has crap together"] # Curse Words
@@ -287,7 +289,7 @@ unseen_news_text = data_filled['nlp_title_comments']
 #unseen_news_text = ["top snake handler leaves sinking huckabee campaign"]
 
 # tokenize and encode sequences in the test set
-MAX_LENGTH = 55
+MAX_LENGTH = 30
 tokens_unseen = tokenizer.batch_encode_plus(
     unseen_news_text,
     max_length = MAX_LENGTH,
@@ -303,6 +305,7 @@ with torch.no_grad():
   preds = preds.detach().cpu().numpy()
 
 preds = np.argmax(preds, axis = 1)
+
 print(preds)
 
 def label(x):
@@ -316,4 +319,4 @@ converted_predictions = [label(x) for x in preds]
 
 test_df = pd.read_csv("test.csv")
 test_df["nlp_class"] = converted_predictions
-test_df.to_csv("nlp_predictions0.csv", index=False)
+test_df.to_csv("nlp_predictions1.csv", index=False)

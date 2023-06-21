@@ -3,6 +3,7 @@ import pandas as pd
 import pycaret
 import transformers
 from transformers import AutoModel, BertTokenizerFast, pipeline
+from transformers import RobertaTokenizer, RobertaModel, BertModel, BertTokenizer
 from transformers import AlbertTokenizer, AlbertModel
 
 import matplotlib.pyplot as plt
@@ -20,8 +21,6 @@ if torch.cuda.is_available():
 else:
     print("GPU is NOT available")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Variable used below to set model training mode to use GPU
-
-
 
 import os
 # CUBLAS_WORKSPACE_CONFIG=:4096:8 needed for pytorch reproducibility
@@ -56,22 +55,28 @@ train_df = pd.read_csv(DATASET_TRAIN_CSV)
 # print(cv_class_counts)
 
 
-# Load BERT model and tokenizer via HuggingFace Transformers https://huggingface.co/models
-bert = AlbertModel.from_pretrained("albert-base-v2")
-tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
-
 # Instantiate pipeline with fill-mask task
-unmasker = pipeline('fill-mask', model='albert-base-v2')
+# unmasker = pipeline('fill-mask', model='albert-base-v2')
 # other than bert you can try other pretrained models from huggingface e.g. albert, distilbert, etc
 
 # But it can be biased e.g. Occupation for Male vs Female
 # print(unmasker("Chloe wishes to be a [MASK]."))
 
+# Named entity recognition
+# ner = pipeline(model="dslim/bert-base-NER-uncased")
+
+# MODEL = "jy46604790/Fake-News-Bert-Detect"
+# clf = pipeline("text-classification", model=MODEL, tokenizer=MODEL)
+# print(clf("Indonesian police have recaptured a U.S. citizen who escaped a week ago from an overcrowded prison on the"))
+
+
 
 data = pd.read_csv('train.csv')
-data_filled = data.fillna(value=" ")
-data['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
-print(data.nlp_title_comments[20])
+data_filled = data.fillna(value="")
+# data['nlp_title_text'] = "title: " + data_filled['nlp_title'].astype(str) + ", text: " + data_filled['nlp_text'].astype(str)
+
+data['nlp_title_text'] = data_filled['nlp_title'].astype(str) + " " + data_filled['nlp_comments'].astype(str)
+print(data.nlp_title_text[26])
 
 # Target column is made of string values True/Fake, let's change it to numbers 0/1 (Fake=1)
 data['label'] = pd.get_dummies(data.nlp_class)['fake']
@@ -79,7 +84,7 @@ data['label'] = pd.get_dummies(data.nlp_class)['fake']
 
 # Train-Validation-Test set split into 70:15:15 ratio
 # Train-Temp split
-train_text, temp_text, train_labels, temp_labels = train_test_split(data['nlp_title_comments'], data['label'],
+train_text, temp_text, train_labels, temp_labels = train_test_split(data['nlp_title_text'], data['label'],
                                                                     random_state=2018,
                                                                     test_size=0.3,
                                                                     stratify=data['nlp_class'])
@@ -89,6 +94,18 @@ val_text, test_text, val_labels, test_labels = train_test_split(temp_text, temp_
                                                                 test_size=0.5,
                                                                 stratify=temp_labels)
 
+# Load BERT model and tokenizer via HuggingFace Transformers https://huggingface.co/models
+bert = AlbertModel.from_pretrained("albert-base-v2")
+tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
+
+# bert = RobertaModel.from_pretrained("jy46604790/Fake-News-Bert-Detect")
+# tokenizer = RobertaTokenizer.from_pretrained("jy46604790/Fake-News-Bert-Detect")
+
+# bert = RobertaModel.from_pretrained("textattack/roberta-base-CoLA")
+# tokenizer = RobertaTokenizer.from_pretrained("textattack/roberta-base-CoLA")
+
+# tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# bert = BertModel.from_pretrained("bert-base-uncased")
 
 # Plot histogram of the number of words in train data 'title'
 seq_len = [len(title.split()) for title in train_text]
@@ -96,11 +113,11 @@ seq_len = [len(title.split()) for title in train_text]
 pd.Series(seq_len).hist(bins = 100,color='firebrick')
 plt.xlabel('Number of Words')
 plt.ylabel('Number of texts')
-plt.show();
+# plt.show()
 
 
 # Majority of titles above have word length under 15. So, we set max title length as 15
-MAX_LENGTH = 55
+MAX_LENGTH = 250
 # Tokenize and encode sequences in the train set
 tokens_train = tokenizer.batch_encode_plus(
     train_text.tolist(),
@@ -138,7 +155,7 @@ test_y = torch.tensor(test_labels.tolist()).to(device)
 
 # Data Loader structure definition
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-batch_size = 16                                              #define a batch size
+batch_size = 64                                              #define a batch size
 
 train_data = TensorDataset(train_seq, train_mask, train_y)    # wrap tensors
 train_sampler = RandomSampler(train_data)                     # sampler for sampling the data during training
@@ -179,11 +196,11 @@ model = model.cuda()
 # Define the optimizer
 from transformers import AdamW
 optimizer = AdamW(model.parameters(),
-                  lr = 1e-5)          # learning rate
+                  lr = 5e-4)          # learning rate
 # Define the loss function
 cross_entropy  = nn.NLLLoss()
 # Number of training epochs
-epochs = 20
+epochs = 10
 
 
 # Defining training and evaluation functions
@@ -241,7 +258,7 @@ for epoch in range(epochs):
     valid_loss = evaluate()                    # evaluate model
     if valid_loss < best_valid_loss:              # save the best model
         best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'new_model_weights.pt')
+        torch.save(model.state_dict(), 'new_model_weights2.pt')
     train_losses.append(train_loss)               # append training and validation loss
     valid_losses.append(valid_loss)
 
@@ -250,17 +267,8 @@ for epoch in range(epochs):
 
 
 # save weights of trained model (OPTIONAL)
-path = 'fakenews_weights.pt'
+path = 'fakenews_weights2.pt'
 torch.save(model.state_dict(), path)
-
-
-
-## APPLYING ON TEST DATA:
-
-# load weights of best model
-path = 'fakenews_weights.pt'
-path = 'new_model_weights.pt'
-model.load_state_dict(torch.load(path))
 
 with torch.no_grad():
   preds = model(test_seq, test_mask)
@@ -269,51 +277,3 @@ with torch.no_grad():
 preds = np.argmax(preds, axis = 1)
 print(classification_report(test_y.cpu(), preds))
 
-
-# testing on unseen data (0 is True; 1 is Fake)
-import pandas as pd
-# Samples from Straits Times
-#unseen_news_text = ["Singapore core and headline inflation ease in march, providing some respite"]
-#unseen_news_text = ["Integrated resorts in Japan, Thailand set to compete with Singapore's own"]
-test_data = pd.read_csv("test.csv")
-data_filled = test_data.fillna(value=" ")
-data_filled['nlp_title_comments'] = "title: " + data_filled['nlp_title'].astype(str) + ", comments: " + data_filled['nlp_comments'].astype(str)
-print(data_filled.nlp_title_comments[20])
-unseen_news_text = data_filled['nlp_title_comments']
-
-# Samples from Fake Websites
-# unseen_news_text = ["Depressed citizen dresses up as adult who has crap together"] # Curse Words
-#unseen_news_text = ["Here’s The Moment A Black Woman Protected A White Man At A KKK Rally."]
-#unseen_news_text = ["top snake handler leaves sinking huckabee campaign"]
-
-# tokenize and encode sequences in the test set
-MAX_LENGTH = 55
-tokens_unseen = tokenizer.batch_encode_plus(
-    unseen_news_text,
-    max_length = MAX_LENGTH,
-    pad_to_max_length=True,
-    truncation=True
-)
-
-unseen_seq = torch.tensor(tokens_unseen['input_ids']).to(device)
-unseen_mask = torch.tensor(tokens_unseen['attention_mask']).to(device)
-
-with torch.no_grad():
-  preds = model(unseen_seq, unseen_mask)
-  preds = preds.detach().cpu().numpy()
-
-preds = np.argmax(preds, axis = 1)
-print(preds)
-
-def label(x):
-  class_number = round(x)
-  if (class_number == 0):
-    return 'real'
-  else:
-    return 'fake'
-
-converted_predictions = [label(x) for x in preds]
-
-test_df = pd.read_csv("test.csv")
-test_df["nlp_class"] = converted_predictions
-test_df.to_csv("nlp_predictions0.csv", index=False)
